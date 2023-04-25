@@ -1,0 +1,280 @@
+module AEC(clk, rst, ascii_in, ready, valid, result);
+
+// Input signal
+input clk;
+input rst;
+input ready;
+input [7:0] ascii_in;
+
+// Output signal
+output valid;
+output [6:0] result;
+
+
+//FSM parameters define
+localparam READY = 4'd0;
+localparam SAVED_DATA = 4'd1;
+localparam CALCULATION = 4'd2;
+localparam POP_SCRATCH = 4'd4;
+localparam OUTPUT = 4'd5;
+localparam INITIALIZED = 4'd6;
+//parameters define
+reg valid;
+reg [6:0] result;
+
+reg [4:0] state, nextState;
+reg [6:0] saved_data [0:15];
+reg [3:0] saved_index;
+
+reg [6:0] output_data [0:15];
+reg [3:0] output_index;
+
+reg [6:0] operator_data [0:15];
+reg [3:0] operator_index;
+
+integer i;
+/***ascii transform table***/
+/*
+    ascii | number in program | Represent |
+    48      0                   0
+    49      1                   1
+    50      2                   2
+    51      3                   3
+    52      4                   4
+    53      5                   5
+    54      6                   6
+    55      7                   7
+    56      8                   8
+    57      9                   9
+    97      10                  a
+    98      11                  b
+    99      12                  c    
+    100     13                  d
+    101     14                  e
+    102     15                  f
+    40      16                  (
+    41      17                  )
+    42      18                  *
+    43      19                  +   
+    45      20                  - 
+    61      21                  =        
+*/
+//combinational circuit;
+always@(*) begin
+    case(state) 
+        READY:  begin
+            if(ready) nextState = SAVED_DATA;
+            else nextState = READY;
+        end
+        SAVED_DATA: begin
+            if(ascii_in != 8'd61) nextState = SAVED_DATA;
+            else nextState = CALCULATION;
+        end
+        CALCULATION: begin
+            if(saved_data[saved_index] == 7'd21) begin
+                    if(operator_index != 7'd0) nextState = CALCULATION;
+                    else nextState = OUTPUT;
+            end
+            else if(saved_data[saved_index] <= 7'd15) begin //number
+                    nextState = CALCULATION;
+            end
+            else if(saved_data[saved_index] == 7'd17) begin //)
+                    nextState = POP_SCRATCH;
+            end
+            else begin //operator
+                    nextState = CALCULATION;
+            end
+        end
+        POP_SCRATCH: begin
+            if(operator_data[operator_index - 4'd1] != 7'd16) nextState = POP_SCRATCH;
+            else nextState = CALCULATION;
+        end
+        OUTPUT: begin
+            nextState = INITIALIZED;
+        end
+        INITIALIZED: begin
+            nextState = READY;
+        end
+
+    endcase   
+
+end
+//sequential circuit;
+always@(posedge clk) begin
+    if (rst)
+        state <= READY;
+    else
+        state <= nextState;
+end
+//other calculation circuit
+always@(posedge clk or posedge rst)
+    if(rst) begin
+        //initial state
+        result <= 7'd0;
+        valid <= 1'b0;
+        for(i=0;i<16;i=i+1) begin
+           saved_data[i] <= 7'd0;
+           output_data[i] <= 7'd0;
+           operator_data[i] <= 7'd0;
+        end
+        saved_index <= 4'd0;
+        output_index <= 4'd0;
+        operator_index <= 4'd0;
+
+    end
+    else begin
+        case(state)
+            READY: begin
+                if(ready) begin
+                    if(ascii_in < 8'd58 && ascii_in > 8'd47) begin  //0-9
+                        saved_data[saved_index] <= ascii_in - 8'd48;
+                    end
+                    else if(ascii_in < 8'd103 && ascii_in > 8'd96) begin
+                        saved_data[saved_index] <= ascii_in - 8'd87;
+                    end
+                    else saved_data[saved_index] <= 7'd16;
+                end
+            end
+            SAVED_DATA: begin
+                saved_index = saved_index + 4'd1;
+                if(ascii_in < 8'd58 && ascii_in > 8'd47) saved_data[saved_index] <= (ascii_in - 8'd48);
+                else if(ascii_in < 8'd103 && ascii_in > 8'd96) saved_data[saved_index] <= (ascii_in - 8'd87);
+                else if(ascii_in == 8'd40) saved_data[saved_index] <= 7'd16;
+                else if(ascii_in == 8'd41) saved_data[saved_index] <= 7'd17;
+                else if(ascii_in == 8'd42) saved_data[saved_index] <= 7'd18;
+                else if(ascii_in == 8'd43) saved_data[saved_index] <= 7'd19;
+                else if(ascii_in == 8'd45) saved_data[saved_index] <= 7'd20;
+                else begin
+                    saved_data[saved_index] <= 7'd21;
+                    saved_index <= 7'd0;
+                end
+            end
+            CALCULATION: begin
+                if(saved_data[saved_index] == 7'd21) begin
+                    if(operator_index != 7'd0) begin
+                        if(operator_data[operator_index - 4'd1] == 7'd18) begin //*
+                                output_data[output_index - 4'd2] <= output_data[output_index - 4'd2] * output_data[output_index - 4'd1];
+                        end
+                        else if(operator_data[operator_index - 4'd1] == 7'd19) begin //+
+                                output_data[output_index - 4'd2] <= output_data[output_index - 4'd2] + output_data[output_index - 4'd1];
+                        end
+                        else begin  //-
+                                output_data[output_index - 4'd2] <= output_data[output_index - 4'd2] - output_data[output_index - 4'd1];
+                        end
+                        output_index = output_index - 4'd1;
+                        operator_index = operator_index - 4'd1;
+                    end
+                    //else   
+                end
+                else if(saved_data[saved_index] <= 7'd15) begin //number
+                        output_data[output_index] <= saved_data[saved_index];
+                        saved_index <= saved_index + 1;
+                        output_index <= output_index + 1;
+                end
+                else if(saved_data[saved_index] == 7'd17) begin // )
+                        //operator_index <= operator_index - 4'd1;
+                        saved_index <= saved_index + 1;
+                end
+                else begin //operator
+                    if(operator_index == 0) begin
+                        operator_data[operator_index] <= saved_data[saved_index];
+                        saved_index <= saved_index + 4'd1;
+                        operator_index <= operator_index + 4'd1;
+                    end
+                    else begin
+                        if(saved_data[saved_index] == 7'd19 || saved_data[saved_index] == 7'd20) begin //+ or -
+                            if(operator_data[operator_index - 4'd1] == 7'd18) begin  //*
+                                output_data[output_index - 4'd2] = output_data[output_index - 4'd2] * output_data[output_index - 4'd1];
+                                output_index = output_index - 4'd1;
+                                //operator_data[operator_index - 4'd1] <= saved_data[saved_index]; //給進新的operator
+                                if(operator_data[operator_index - 4'd2] == 7'd19) begin  //+
+                                    output_data[output_index - 4'd2] = output_data[output_index - 4'd2] + output_data[output_index - 4'd1];
+                                    operator_data[operator_index - 4'd2] = saved_data[saved_index];
+                                    output_index = output_index - 4'd1;
+                                    operator_index = operator_index - 4'd1;
+                                end
+                                else if(operator_data[operator_index - 4'd2] == 7'd20) begin //-
+                                    output_data[output_index - 4'd2] = output_data[output_index - 4'd2] - output_data[output_index - 4'd1];
+                                    //output_data[output_index - 4'd1] <= output_data[output_index];
+                                    operator_data[operator_index - 4'd2] = saved_data[saved_index];
+                                    output_index = output_index - 4'd1;
+                                    operator_index = operator_index - 4'd1;
+                                end
+                                else begin
+                                    operator_data[operator_index - 4'd1] = saved_data[saved_index];
+                                end
+                                
+                            end
+                            else if(operator_data[operator_index - 4'd1] == 7'd19) begin  //+
+                                output_data[output_index - 4'd2] <= output_data[output_index - 4'd2] + output_data[output_index - 4'd1];
+                                operator_data[operator_index - 4'd1] <= saved_data[saved_index];
+                                output_index <= output_index - 4'd1;
+                            end
+                            else if(operator_data[operator_index - 4'd1] == 7'd20) begin //-
+                                output_data[output_index - 4'd2] <= output_data[output_index - 4'd2] - output_data[output_index - 4'd1];
+                                operator_data[operator_index - 4'd1] <= saved_data[saved_index];
+                                output_index <= output_index - 4'd1;
+                            end
+                            else begin // (
+                                operator_data[operator_index] <= saved_data[saved_index];
+                                operator_index <= operator_index + 4'd1;
+                            end
+                            
+                        end
+                        else if(saved_data[saved_index] == 7'd18)begin //*
+                            if(operator_data[operator_index - 4'd1] == 7'd18)begin //*, pass old one.
+                                output_data[output_index - 4'd2] <= output_data[output_index - 4'd2] * output_data[output_index - 4'd1];
+                                //operator_data[operator_index - 4'd1] <= saved_data[saved_index];
+                                output_index <= output_index - 4'd1;
+                            end
+                            else begin //+ - (, cover it;
+                                operator_data[operator_index] <= saved_data[saved_index];
+                                operator_index <= operator_index + 4'd1;
+                            end
+                        end
+                        else begin //(
+                            operator_data[operator_index] <= saved_data[saved_index];
+                            operator_index <= operator_index + 4'd1;
+                        end
+                        saved_index <= saved_index + 4'd1;
+                    end
+                end
+            end
+            POP_SCRATCH: begin
+                if(operator_data[operator_index - 4'd1] != 7'd16) begin // if not (
+                    if(operator_data[operator_index - 4'd1] == 7'd18) begin //*
+                        output_data[output_index - 4'd2] <= output_data[output_index - 4'd2] * output_data[output_index - 4'd1];
+                    end
+                    else if(operator_data[operator_index - 4'd1] == 7'd19) begin //+
+                        output_data[output_index - 4'd2] <= output_data[output_index - 4'd2] + output_data[output_index - 4'd1];
+                    end
+                    else begin //-
+                        output_data[output_index - 4'd2] <= output_data[output_index - 4'd2] - output_data[output_index - 4'd1];
+                    end
+                    output_index <= output_index - 4'd1;
+                    operator_index = operator_index - 4'd1;
+                end
+                else begin
+                    operator_index = operator_index - 4'd1;
+                end
+            end
+            OUTPUT: begin
+                result <= output_data[output_index - 4'd1];
+                valid <= 1'b1;
+            end
+            INITIALIZED: begin
+                result <= 7'd0;
+                valid <= 1'b0;
+                for(i=0;i<16;i=i+1) begin
+                saved_data[i] <= 7'd0;
+                output_data[i] <= 7'd0;
+                operator_data[i] <= 7'd0;
+                end
+                saved_index <= 4'd0;
+                output_index <= 4'd0;
+                operator_index <= 4'd0;
+            end
+        endcase
+    end
+
+endmodule
