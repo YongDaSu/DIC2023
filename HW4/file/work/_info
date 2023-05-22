@@ -1,0 +1,81 @@
+m255
+K4
+z2
+!s11f vlog 2020.1 2020.02, Feb 28 2020
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+dD:/DICdesign/HW3/file
+vATCONV
+Z0 !s110 1684743475
+!i10b 1
+!s100 Nf0kZonMJ5ka<IG[zT;Vn0
+Z1 !s11b Dg1SIo80bB@j0V0VzS_@n1
+IKHR15QT<g@7MCcR1fokDX3
+Z2 VDg1SIo80bB@j0V0VzS_@n1
+Z3 dD:/DICdesign/HW4/file
+w1684668879
+8D:/DICdesign/HW4/file/ATCONV.v
+FD:/DICdesign/HW4/file/ATCONV.v
+!i122 186
+L0 2 348
+Z4 OV;L;2020.1;71
+r1
+!s85 0
+31
+Z5 !s108 1684743475.000000
+!s107 D:/DICdesign/HW4/file/ATCONV.v|
+!s90 -reportprogress|300|-work|work|-stats=none|D:/DICdesign/HW4/file/ATCONV.v|
+!i113 1
+Z6 o-work work
+Z7 tCvgOpt 0
+n@a@t@c@o@n@v
+vhard_block
+!s110 1684732929
+!i10b 1
+!s100 =;OS?He@=4=FIj^Ff<:nj3
+R1
+I_O_1OnELglJ]GGXNQ?=060
+R2
+R3
+w1684669000
+8D:/DICdesign/HW4/file/ATCONV.vo
+FD:/DICdesign/HW4/file/ATCONV.vo
+!i122 170
+L0 20900 34
+R4
+r1
+!s85 0
+31
+!s108 1684732929.000000
+!s107 D:/DICdesign/HW4/file/ATCONV.vo|
+!s90 -reportprogress|300|-work|work|-stats=none|D:/DICdesign/HW4/file/ATCONV.vo|
+!i113 1
+R6
+R7
+vtestfixture
+R0
+!i10b 1
+!s100 JK3eh1Bnj@LB99?:=EZ3_2
+R1
+IVTcdUY5zS_^MiJ?3mCi:63
+R2
+R3
+w1684669367
+8D:/DICdesign/HW4/file/testfixture.v
+FD:/DICdesign/HW4/file/testfixture.v
+!i122 185
+L0 8 173
+R4
+r1
+!s85 0
+31
+R5
+!s107 D:/DICdesign/HW4/file/testfixture.v|
+!s90 -reportprogress|300|-work|work|-stats=none|D:/DICdesign/HW4/file/testfixture.v|
+!i113 1
+R6
+R7
