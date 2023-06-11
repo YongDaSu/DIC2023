@@ -17,7 +17,7 @@ output reg [7:0] wdata_b;
 input [7:0] rdata_b;
 output reg done;
 
-parameter   BUFFER = 0,
+localparam  BUFFER = 0,
             GET_DATA = 1,
             INTERPOLATION = 2,
             WRITE2MEM = 3,
@@ -30,6 +30,8 @@ reg [9:0] data_buffer [8:0];
 reg [1:0] stage;
 reg [3:0] counter;
 
+integer i;
+
 wire [13:0] lefttop, top, righttop, left, right, leftbottom, bottom, rightbottom;
 assign lefttop = {(center[13:7] - 7'd1) , (center[6:0] - 7'd1)};
 assign top = {(center[13:7] - 7'd1) , center[6:0]};
@@ -39,6 +41,9 @@ assign right = {center[13:7] , (center[6:0] + 7'd1)};
 assign leftbottom = {(center[13:7] + 7'd1) , (center[6:0] - 7'd1)};
 assign bottom = {(center[13:7] + 7'd1) , center[6:0]};
 assign rightbottom = {(center[13:7] + 7'd1) , (center[6:0] + 7'd1)};
+
+//initial done <= 1'b0;
+
 
 always @(*) begin
     case(state)
@@ -63,7 +68,7 @@ always @(*) begin
         DONE: begin
             nextState = DONE;
         end
-        default: state = BUFFER;
+        default: nextState = BUFFER;
     endcase
 end
 
@@ -72,11 +77,16 @@ always @(posedge clk or posedge reset) begin
     else state <= nextState;
 end
 
-always @(posedge clk or posedge reset) begin
+always @(posedge clk) begin
     if(reset) begin
+        //state <= BUFFER;
         center <= 14'd0;
         stage <= 2'd0;
         counter <= 4'd0;
+        done <= 1'b0;
+        for(i = 0;i < 9;i = i + 1) begin
+            data_buffer[i] <= 10'd0;
+        end
     end
     else begin
         case(state)
